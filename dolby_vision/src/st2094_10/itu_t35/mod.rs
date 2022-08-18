@@ -56,6 +56,10 @@ impl ST2094_10ItuT35 {
     }
 
     pub fn validated_trimmed_data(data: &[u8]) -> Result<&[u8]> {
+        if data.len() < 7 {
+            bail!("Invalid St2094-10 T-T35 SEI start bytes\n{:?}", data)
+        }
+
         let trimmed_data = match &data[..7] {
             [0x4E, 0x01, 0x04, _, 0xB5, 0x00, 0x31] => &data[4..],
             [0xB5, 0x00, 0x31, 0x47, 0x41, 0x39, 0x34] => data,
