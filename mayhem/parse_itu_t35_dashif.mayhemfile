@@ -1,0 +1,7 @@
+project: dovi-tool
+target: parse-itu-t35-dashif
+
+cmds:
+  - cmd: /parse_itu_t35_dashif
+  - cmd: /parse_itu_t35_dashif_no_inst @@
+    libfuzzer: false
