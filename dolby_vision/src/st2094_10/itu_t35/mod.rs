@@ -28,6 +28,9 @@ impl ST2094_10ItuT35 {
         let bytes = clear_start_code_emulation_prevention_3_byte(trimmed_data);
 
         let mut reader = BitVecReader::new(bytes);
+        if reader.available() <= 8 + 16 + 32 + 8 {
+            bail!("not enough data in stream");
+        }
 
         let itu_t_t35_country_code: u8 = reader.get_n(8);
         let itu_t_t35_provider_code: u16 = reader.get_n(16);
