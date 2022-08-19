@@ -1,5 +1,5 @@
-use anyhow::{Result, bail, ensure};
-use bitvec_helpers::bitstream_io_reader::BsIoSliceReader;
+use anyhow::{bail, ensure, Result};
+use bitvec_helpers::bitvec_reader::BitVecReader;
 
 use crate::utils::clear_start_code_emulation_prevention_3_byte;
 
@@ -27,22 +27,25 @@ impl ST2094_10ItuT35 {
         let trimmed_data = Self::validated_trimmed_data(data)?;
         let bytes = clear_start_code_emulation_prevention_3_byte(trimmed_data);
 
-        let mut reader = BsIoSliceReader::from_slice(&bytes);
+        let mut reader = BitVecReader::new(bytes);
+        if reader.available() <= 8 + 16 + 32 + 8 {
+            bail!("not enough data in stream");
+        }
 
-        let itu_t_t35_country_code = reader.read::<8, u8>()?;
-        let itu_t_t35_provider_code = reader.read::<16, u16>()?;
+        let itu_t_t35_country_code: u8 = reader.get_n(8);
+        let itu_t_t35_provider_code: u16 = reader.get_n(16);
 
         ensure!(itu_t_t35_country_code == 0xB5);
         ensure!(itu_t_t35_provider_code == 0x31);
 
-        let user_identifier = reader.read::<32, u32>()?;
+        let user_identifier: u32 = reader.get_n(32);
         ensure!(
             user_identifier == 0x47413934,
             "invalid user_identifier: {}",
             user_identifier
         );
 
-        let user_data_type_code = reader.read::<8, u8>()?;
+        let user_data_type_code: u8 = reader.get_n(8);
 
         let meta = match user_data_type_code {
             0x08 => ST2094_10CmData::parse(&mut reader)?,
