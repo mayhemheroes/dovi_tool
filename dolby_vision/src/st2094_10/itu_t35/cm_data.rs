@@ -58,6 +58,12 @@ impl ST2094_10CmData {
             meta.pred_pivot_value[cmp]
                 .resize_with((meta.num_pivots_minus2[cmp] as usize) + 2, Default::default);
 
+            if reader.available()
+                < ((meta.num_pivots_minus2[cmp] as usize) + 2)
+                    * ((meta.el_bit_depth_minus8 as usize) + 8)
+            {
+                anyhow::bail!("not enough data in stream");
+            }
             for pivot_idx in 0..(meta.num_pivots_minus2[cmp] as usize) + 2 {
                 meta.pred_pivot_value[cmp][pivot_idx] =
                     reader.get_n((meta.el_bit_depth_minus8 as usize) + 8);

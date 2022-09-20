@@ -28,6 +28,9 @@ impl ST2094_10ItuT35 {
         let bytes = clear_start_code_emulation_prevention_3_byte(trimmed_data);
 
         let mut reader = BitVecReader::new(bytes);
+        if reader.available() <= 8 + 16 + 32 + 8 {
+            bail!("not enough data in stream");
+        }
 
         let itu_t_t35_country_code: u8 = reader.get_n(8);
         let itu_t_t35_provider_code: u16 = reader.get_n(16);
@@ -56,6 +59,10 @@ impl ST2094_10ItuT35 {
     }
 
     pub fn validated_trimmed_data(data: &[u8]) -> Result<&[u8]> {
+        if data.len() < 7 {
+            bail!("Invalid St2094-10 T-T35 SEI start bytes\n{:?}", data)
+        }
+
         let trimmed_data = match &data[..7] {
             [0x4E, 0x01, 0x04, _, 0xB5, 0x00, 0x31] => &data[4..],
             [0xB5, 0x00, 0x31, 0x47, 0x41, 0x39, 0x34] => data,
