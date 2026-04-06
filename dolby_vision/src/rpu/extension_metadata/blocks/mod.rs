@@ -4,7 +4,7 @@ use bitvec_helpers::{
 };
 
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 pub mod level1;
 pub mod level10;
@@ -220,5 +220,24 @@ impl ExtMetadataBlock {
         }
 
         Ok(())
+    }
+
+    #[cfg(feature = "serde")]
+    pub fn serialize_inner<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            ExtMetadataBlock::Level1(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level2(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level3(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level4(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level5(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level6(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level8(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level9(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level10(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level11(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level254(b) => b.serialize(serializer),
+            ExtMetadataBlock::Level255(b) => b.serialize(serializer),
+            ExtMetadataBlock::Reserved(b) => b.serialize(serializer),
+        }
     }
 }

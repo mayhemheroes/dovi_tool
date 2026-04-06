@@ -17,7 +17,7 @@ mod remove;
 pub use convert::ConvertArgs;
 pub use demux::DemuxArgs;
 pub use editor::EditorArgs;
-pub use export::{ExportArgs, ExportData};
+pub use export::{ExportArgs, ExportData, ExportLevel, LevelsOutputFormat};
 pub use extract_rpu::ExtractRpuArgs;
 pub use generate::GenerateArgs;
 pub use info::InfoArgs;

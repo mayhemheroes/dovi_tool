@@ -132,6 +132,11 @@ dovi_tool <SUBCOMMAND> --help
       * `all` - Exports the list of RPUs as a JSON file
       * `scenes` - Exports the frame indices at which `scene_refresh_flag` is set to 1
       * `level5` - Exports the video's L5 metadata in the form of an `editor` config JSON
+    * `-l`, `--levels`: Export specific extension metadata levels.
+      * Possible values: all levels in format `level1`, `level2`... See `dovi_tool export --help` message.  
+        Output file path may be added as `level1=output.csv,level2...` to override default path.
+    * `-f`, `--levels-format`: Format to output levels exports, defaults to `csv`.
+      * Possible values: `csv`, `json`
 
     &nbsp;
 
