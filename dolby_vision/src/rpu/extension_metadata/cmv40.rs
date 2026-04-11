@@ -184,4 +184,27 @@ impl CmV40DmData {
             ext_metadata_blocks: vec![ExtMetadataBlock::Level254(level254.clone())],
         }
     }
+
+    /// Creates CMv4.0 DM data with default static blocks: L3, L9, L11, L254.
+    ///
+    /// Used for appending CMv4.0 to RPUs that only have CMv2.9 metadata,
+    /// switching the DV processor to the CMv4.0 control path (dm_version_index=2).
+    pub fn new_with_default_blocks() -> Self {
+        Self {
+            num_ext_blocks: 4,
+            ext_metadata_blocks: vec![
+                ExtMetadataBlock::Level3(ExtMetadataBlockLevel3::default()),
+                ExtMetadataBlock::Level9(ExtMetadataBlockLevel9 {
+                    length: 1,
+                    source_primary_index: 0,
+                    ..Default::default()
+                }),
+                ExtMetadataBlock::Level11(ExtMetadataBlockLevel11 {
+                    content_type: 1,
+                    ..Default::default()
+                }),
+                ExtMetadataBlock::Level254(ExtMetadataBlockLevel254::cmv402_default()),
+            ],
+        }
+    }
 }

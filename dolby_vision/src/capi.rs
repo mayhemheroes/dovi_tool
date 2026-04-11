@@ -446,6 +446,37 @@ pub unsafe extern "C" fn dovi_rpu_remove_mapping(ptr: *mut RpuOpaque) -> i32 {
 /// # Safety
 /// The struct pointer must be valid.
 ///
+/// Adds default CMv4.0 extension metadata (L3, L9, L11, L254) to the RPU.
+/// Does nothing if CMv4.0 metadata is already present.
+///
+/// Returns 1 if metadata was added, 0 if already present, -1 on error.
+/// If an error occurs, it is logged to RpuOpaque.error.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dovi_rpu_set_cmv40_default(ptr: *mut RpuOpaque) -> i32 {
+    if ptr.is_null() {
+        return -1;
+    }
+
+    let opaque = unsafe { &mut *ptr };
+
+    if let Some(rpu) = &mut opaque.rpu {
+        match rpu.set_cmv40_default_metadata() {
+            Ok(true) => 1,
+            Ok(false) => 0,
+            Err(e) => {
+                opaque.error =
+                    CString::new(format!("Failed setting CMv4.0 default metadata: {e}")).ok();
+                -1
+            }
+        }
+    } else {
+        -1
+    }
+}
+
+/// # Safety
+/// The struct pointer must be valid.
+///
 /// Writes the encoded RPU as `itu_t_t35_payload_bytes` for AV1 ITU-T T.35 metadata OBU
 /// If an error occurs in the writing, it is logged to RpuOpaque.error
 #[unsafe(no_mangle)]
