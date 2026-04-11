@@ -452,7 +452,7 @@ pub unsafe extern "C" fn dovi_rpu_remove_mapping(ptr: *mut RpuOpaque) -> i32 {
 /// Returns 1 if metadata was added, 0 if already present, -1 on error.
 /// If an error occurs, it is logged to RpuOpaque.error.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dovi_rpu_set_cmv40_default(ptr: *mut RpuOpaque) -> i32 {
+pub unsafe extern "C" fn dovi_rpu_add_cmv40_safe_default_metadata(ptr: *mut RpuOpaque) -> i32 {
     if ptr.is_null() {
         return -1;
     }
@@ -460,9 +460,8 @@ pub unsafe extern "C" fn dovi_rpu_set_cmv40_default(ptr: *mut RpuOpaque) -> i32 
     let opaque = unsafe { &mut *ptr };
 
     if let Some(rpu) = &mut opaque.rpu {
-        match rpu.set_cmv40_default_metadata() {
-            Ok(true) => 1,
-            Ok(false) => 0,
+        match rpu.add_cmv40_safe_default_metadata() {
+            Ok(modified) => modified as i32,
             Err(e) => {
                 opaque.error =
                     CString::new(format!("Failed setting CMv4.0 default metadata: {e}")).ok();

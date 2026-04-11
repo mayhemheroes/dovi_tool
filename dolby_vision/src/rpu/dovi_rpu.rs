@@ -577,20 +577,21 @@ impl DoviRpu {
 
     /// Adds default CMv4.0 extension metadata (L3, L9, L11, L254) if not already present.
     /// Returns Ok(true) if metadata was added, Ok(false) if CMv4.0 was already present.
-    pub fn set_cmv40_default_metadata(&mut self) -> Result<bool> {
-        let vdr_dm_data = self
-            .vdr_dm_data
-            .as_mut()
-            .ok_or_else(|| anyhow::anyhow!("No VDR DM data present"))?;
+    pub fn add_cmv40_safe_default_metadata(&mut self) -> Result<bool> {
+        let ret = if let Some(vdr_dm_data) = self.vdr_dm_data.as_mut()
+            && vdr_dm_data.cmv40_metadata.is_none()
+        {
+            self.modified = true;
+            let _ = vdr_dm_data
+                .cmv40_metadata
+                .insert(DmData::V40(CmV40DmData::default_safe()));
 
-        if vdr_dm_data.cmv40_metadata.is_some() {
-            return Ok(false);
-        }
+            true
+        } else {
+            false
+        };
 
-        vdr_dm_data.cmv40_metadata = Some(DmData::V40(CmV40DmData::new_with_default_blocks()));
-        self.modified = true;
-
-        Ok(true)
+        Ok(ret)
     }
 
     pub fn remove_cmv40_extension_metadata(&mut self) -> Result<()> {

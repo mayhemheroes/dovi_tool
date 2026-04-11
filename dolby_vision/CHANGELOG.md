@@ -6,6 +6,8 @@
   - The iterators do not filter out errors anymore.  
     `collect_encoded_rpus` was added for convenience to reproduce previous behaviour.
 - `From<u64> for DoviMappingMethod` was replaced by `TryFrom`.
+- Updated `CmV40DmData` default blocks when generating. Now includes:
+  - no-op L3, Display-P3 L9, Cinema/D65 L11 metadata blocks
 
 ## 3.3.2
 - `rpu`: fix `write_rpu_data` allocated capacity. Now static and 512 bytes.
