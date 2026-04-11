@@ -9,6 +9,9 @@
 - Updated `CmV40DmData` default blocks when generating. Now includes:
   - no-op L3, Display-P3 L9, Cinema/D65 L11 metadata blocks
 
+C-API:
+- Added `dovi_rpu_add_cmv40_safe_default_metadata` function.
+
 ## 3.3.2
 - `rpu`: fix `write_rpu_data` allocated capacity. Now static and 512 bytes.
 - `RpuDataNlq`: fixed incorrect written data for `linear_deadzone_threshold_int`.
