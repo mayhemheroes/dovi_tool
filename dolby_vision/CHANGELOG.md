@@ -11,6 +11,7 @@
 
 C-API:
 - Added `dovi_rpu_add_cmv40_safe_default_metadata` function.
+- Added `dovi_generate_from_json` function.
 
 ## 3.3.2
 - `rpu`: fix `write_rpu_data` allocated capacity. Now static and 512 bytes.
