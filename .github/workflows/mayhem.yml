@@ -14,10 +14,10 @@ jobs:
     name: 'build mayhem fuzzing container'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v4
 
     - name: Log in to the Container registry
-      uses: docker/login-action@v4
+      uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
@@ -25,7 +25,7 @@ jobs:
 
     - name: Extract metadata (tags, labels) for Docker
       id: meta
-      uses: docker/metadata-action@v6
+      uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
@@ -33,7 +33,7 @@ jobs:
       uses: docker/setup-buildx-action@v4
 
     - name: Build and push Docker image
-      uses: docker/build-push-action@v7
+      uses: docker/build-push-action@v6
       with:
         context: .
         file: mayhem/Dockerfile
@@ -55,10 +55,10 @@ jobs:
         - mayhem/parse_itu_t35_dashif.mayhemfile
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v4
 
     - name: Start analysis for ${{ matrix.mayhemfile }}
-      uses: forallsecure/mcode-action@long-runs
+      uses: ForAllSecure/mcode-action@long-runs
       with:
         mayhem-token: ${{ secrets.MAYHEM_TOKEN }}
         args: --image ${{ needs.build.outputs.image }} --file ${{ matrix.mayhemfile }} --duration 300
