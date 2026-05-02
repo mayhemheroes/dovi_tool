@@ -6,158 +6,100 @@ name: Artifacts
 env:
   RELEASE_BIN: dovi_tool
   RELEASE_DIR: artifacts
-  BUILD_PROFILE: release-deploy
   WINDOWS_TARGET: x86_64-pc-windows-msvc
-  WINDOWS_ARM_TARGET: aarch64-pc-windows-msvc
-  MACOS_X86_TARGET: x86_64-apple-darwin
+  MACOS_TARGET: x86_64-apple-darwin
   LINUX_TARGET: x86_64-unknown-linux-musl
-  LINUX_ARM_TARGET: aarch64-unknown-linux-musl
 
 jobs:
-  linux-binary:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-release-env
+  build:
+    name: Build artifacts
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [Linux, macOS, Windows]
+        include: 
+          - build: Linux
+            os: ubuntu-latest
+          - build: macOS
+            os: macos-latest
+          - build: Windows
+            os: windows-latest
 
-      - name: Install musl-tools
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Get the version
+        shell: bash
+        run: |
+          echo "RELEASE_PKG_VERSION=$(cargo pkgid | cut -d# -f2 | cut -d: -f2)" >> $GITHUB_ENV
+          echo "LIBDOVI_PKG_VERSION=$(cargo pkgid --manifest-path dolby_vision/Cargo.toml | cut -d# -f2 | cut -d: -f2)" >> $GITHUB_ENV
+
+      - name: Install musl-tools (Linux)
+        if: matrix.build == 'Linux'
         run: |
           sudo apt-get update -y
-          sudo apt-get install musl-tools gcc-aarch64-linux-gnu -y
+          sudo apt-get install musl-tools -y
 
-      - name: Build
+      - name: Build (Linux)
+        if: matrix.build == 'Linux'
         run: |
           rustup target add ${{ env.LINUX_TARGET }}
-          rustup target add ${{ env.LINUX_ARM_TARGET }}
+          cargo build --release --target ${{ env.LINUX_TARGET }}
 
-          cargo build --profile ${{ env.BUILD_PROFILE }} --target ${{ env.LINUX_TARGET }} --no-default-features --features internal-font
-          cargo build --config "target.${{ env.LINUX_ARM_TARGET }}.linker = 'aarch64-linux-gnu-gcc'" \
-            --profile ${{ env.BUILD_PROFILE }} --target ${{ env.LINUX_ARM_TARGET }} --no-default-features --features internal-font
+      - name: Build (macOS)
+        if: matrix.build == 'macOS'
+        run: cargo build --release
 
-      - name: Create tarball and checksum
-        run: |
-          X86_64_ARCHIVE_FILE=${{ env.RELEASE_DIR }}/${{ env.ARCHIVE_PREFIX }}-${{ env.LINUX_TARGET }}.tar.gz
-          AARCH64_ARCHIVE_FILE=${{ env.RELEASE_DIR }}/${{ env.ARCHIVE_PREFIX }}-${{ env.LINUX_ARM_TARGET }}.tar.gz
+      - name: Build (Windows)
+        if: matrix.build == 'Windows'
+        run: cargo build --release
 
-          mv ./target/${{ env.LINUX_TARGET }}/${{ env.BUILD_PROFILE }}/${{ env.RELEASE_BIN }} ./${{ env.RELEASE_BIN }}
-          tar -cvzf ./${X86_64_ARCHIVE_FILE} ./${{ env.RELEASE_BIN }}
-
-          mv ./target/${{ env.LINUX_ARM_TARGET }}/${{ env.BUILD_PROFILE }}/${{ env.RELEASE_BIN }} ./${{ env.RELEASE_BIN }}
-          tar -cvzf ./${AARCH64_ARCHIVE_FILE} ./${{ env.RELEASE_BIN }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: Linux artifacts
-          path: ./${{ env.RELEASE_DIR }}/*
-
-  windows-binary:
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-release-env
-
-      - name: Install cargo-c
+      - name: Install cargo-c (Windows)
+        if: matrix.build == 'Windows'
         run: |
           $LINK = "https://github.com/lu-zero/cargo-c/releases/latest/download"
           $CARGO_C_FILE = "cargo-c-windows-msvc"
           curl -LO "$LINK/$CARGO_C_FILE.zip"
           7z e -y "$CARGO_C_FILE.zip" -o"${env:USERPROFILE}\.cargo\bin"
 
-      - name: Build
+      - name: Build C lib (Windows)
+        if: matrix.build == 'Windows'
         run: |
-          rustup target add ${{ env.WINDOWS_ARM_TARGET }}
+          cargo cbuild --manifest-path dolby_vision/Cargo.toml --release
 
-          cargo build --profile ${{ env.BUILD_PROFILE }}
-          cargo build --profile ${{ env.BUILD_PROFILE }} --target ${{ env.WINDOWS_ARM_TARGET }}
+      - name: Create artifact directory
+        run: |
+          mkdir ${{ env.RELEASE_DIR }}
 
-      - name: Build C lib
-        run: cargo cbuild --manifest-path dolby_vision/Cargo.toml --profile ${{ env.BUILD_PROFILE }} --library-type cdylib
+      - name: Create tarball (Linux)
+        if: matrix.build == 'Linux'
+        run: |
+          strip ./target/${{ env.LINUX_TARGET }}/release/${{ env.RELEASE_BIN }}
+          mv ./target/${{ env.LINUX_TARGET }}/release/${{ env.RELEASE_BIN }} ./${{ env.RELEASE_BIN }}
+          tar -cvzf ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ env.RELEASE_PKG_VERSION }}-${{ env.LINUX_TARGET }}.tar.gz ./${{ env.RELEASE_BIN }}
 
-      - name: Create zipfile
+      - name: Create zipfile (Windows)
+        if: matrix.build == 'Windows'
         shell: bash
         run: |
-          X86_64_ARCHIVE_FILE=${{ env.RELEASE_DIR }}/${{ env.ARCHIVE_PREFIX }}-${{ env.WINDOWS_TARGET }}.zip
-          AARCH64_ARCHIVE_FILE=${{ env.RELEASE_DIR }}/${{ env.ARCHIVE_PREFIX }}-${{ env.WINDOWS_ARM_TARGET }}.zip
+          mv ./target/release/${{ env.RELEASE_BIN }}.exe ./${{ env.RELEASE_BIN }}.exe
+          7z a ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ env.RELEASE_PKG_VERSION }}-${{ env.WINDOWS_TARGET }}.zip ./${{ env.RELEASE_BIN }}.exe
 
-          mv ./target/${{ env.BUILD_PROFILE }}/${{ env.RELEASE_BIN }}.exe ./${{ env.RELEASE_BIN }}.exe
-          7z a ./${X86_64_ARCHIVE_FILE} ./${{ env.RELEASE_BIN }}.exe
-
-          mv ./target/${{ env.WINDOWS_ARM_TARGET }}/${{ env.BUILD_PROFILE }}/${{ env.RELEASE_BIN }}.exe ./${{ env.RELEASE_BIN }}.exe
-          7z a ./${AARCH64_ARCHIVE_FILE} ./${{ env.RELEASE_BIN }}.exe
-
-          mv ./dolby_vision/target/${{ env.WINDOWS_TARGET }}/${{ env.BUILD_PROFILE }}/dovi.dll .
+          mv ./target/${{ env.WINDOWS_TARGET }}/release/dovi.dll .
           7z a ./${{ env.RELEASE_DIR }}/libdovi-${{ env.LIBDOVI_PKG_VERSION }}-${{ env.WINDOWS_TARGET }}.zip ./dovi.dll
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: Windows artifacts
-          path: ./${{ env.RELEASE_DIR }}/*
-
-  macos-binary:
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-release-env
-
-      - name: Build
+      - name: Create zipfile (macOS)
+        if: matrix.build == 'macOS'
         run: |
-          rustup target add ${{ env.MACOS_X86_TARGET }}
+          strip ./target/release/${{ env.RELEASE_BIN }}
+          mv ./target/release/${{ env.RELEASE_BIN }} ./${{ env.RELEASE_BIN }}
+          zip -9 ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ env.RELEASE_PKG_VERSION }}-${{ env.MACOS_TARGET }}.zip ./${{ env.RELEASE_BIN }}
 
-          cargo build --profile ${{ env.BUILD_PROFILE }}
-          cargo build --profile ${{ env.BUILD_PROFILE }} --target ${{ env.MACOS_X86_TARGET }}
-
-      - name: Create universal macOS binary
-        run: |
-          lipo -create \
-            ./target/${{ env.BUILD_PROFILE }}/${{ env.RELEASE_BIN }} \
-            ./target/${{ env.MACOS_X86_TARGET }}/${{ env.BUILD_PROFILE }}/${{ env.RELEASE_BIN }} \
-            -output ./${{ env.RELEASE_BIN }}
-
-      - name: Create zipfile
-        run: |
-          ARCHIVE_FILE=${{ env.RELEASE_DIR }}/${{ env.ARCHIVE_PREFIX }}-universal-macOS.zip
-          zip -9 ./${ARCHIVE_FILE} ./${{ env.RELEASE_BIN }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+      - name: Upload Zip
+        uses: actions/upload-artifact@v1
         with:
-          name: macOS artifacts
-          path: ./${{ env.RELEASE_DIR }}/*
-
-  create-release:
-    needs: [linux-binary, windows-binary, macos-binary]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-      attestations: write
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v6
-
-      - name: Display structure of downloaded files
-        run: ls -R
-
-      - name: Attest
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: |
-            Linux artifacts/*
-            Windows artifacts/*
-            macOS artifacts/*
-
-      - name: Create a draft release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.RELEASE_PKG_VERSION }}
-          draft: true
-          files: |
-            Linux artifacts/*
-            Windows artifacts/*
-            macOS artifacts/*
+          name: ${{ matrix.build }}
+          path: ./${{ env.RELEASE_DIR }}
