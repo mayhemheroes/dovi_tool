@@ -70,6 +70,9 @@ pub struct EditConfig {
     rpu_levels: Option<Vec<u8>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     allow_cmv4_transfer: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    add_cmv4_default_metadata: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
@@ -260,6 +263,10 @@ impl EditConfig {
 
         if self.remove_mapping {
             rpu.remove_mapping();
+        }
+
+        if self.add_cmv4_default_metadata.is_some_and(|v| v) {
+            self.add_cmv4_safe_default_metadata(rpu)?;
         }
 
         if let Some(l6) = &self.level6 {
@@ -503,6 +510,12 @@ impl EditConfig {
         for (dst_rpu, src_rpu) in zip_iter {
             dst_rpu.replace_levels_from_rpu_cmv40(src_rpu, levels, allow_cmv4_transfer)?;
         }
+
+        Ok(())
+    }
+
+    fn add_cmv4_safe_default_metadata(&self, rpu: &mut DoviRpu) -> Result<()> {
+        rpu.add_cmv40_safe_default_metadata()?;
 
         Ok(())
     }
