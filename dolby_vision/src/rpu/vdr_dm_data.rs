@@ -100,12 +100,11 @@ pub(crate) fn vdr_dm_data_payload(
         vdr_dm_data.cmv29_metadata = Some(DmData::V29(cmv29_dm_data));
     }
 
-    if reader.available()? >= DM_DATA_PAYLOAD2_MIN_BITS {
-        if let Some(cmv40_dm_data) =
+    if reader.available()? >= DM_DATA_PAYLOAD2_MIN_BITS
+        && let Some(cmv40_dm_data) =
             DmData::parse::<CmV40DmData>(reader).with_context(|| CmV40DmData::VERSION)?
-        {
-            vdr_dm_data.cmv40_metadata = Some(DmData::V40(cmv40_dm_data));
-        }
+    {
+        vdr_dm_data.cmv40_metadata = Some(DmData::V40(cmv40_dm_data));
     }
 
     Ok(vdr_dm_data)

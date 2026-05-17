@@ -269,16 +269,16 @@ impl DoviRpu {
         header.write_header(&mut writer)?;
 
         if header.rpu_type == 2 {
-            if !header.use_prev_vdr_rpu_flag {
-                if let Some(mapping) = &self.rpu_data_mapping {
-                    mapping.write(&mut writer, &self.header)?;
-                }
+            if !header.use_prev_vdr_rpu_flag
+                && let Some(mapping) = &self.rpu_data_mapping
+            {
+                mapping.write(&mut writer, &self.header)?;
             }
 
-            if header.vdr_dm_metadata_present_flag {
-                if let Some(vdr_dm_data) = &self.vdr_dm_data {
-                    vdr_dm_data.write(&mut writer)?;
-                }
+            if header.vdr_dm_metadata_present_flag
+                && let Some(vdr_dm_data) = &self.vdr_dm_data
+            {
+                vdr_dm_data.write(&mut writer)?;
             }
         }
 
@@ -458,10 +458,12 @@ impl DoviRpu {
         self.modified = true;
         self.convert_to_p81();
 
-        if let Some(el_type) = self.el_type.as_ref() {
-            if el_type == &DoviELType::FEL {
-                self.remove_mapping();
-            }
+        if self
+            .el_type
+            .as_ref()
+            .is_some_and(|el_type| el_type == &DoviELType::FEL)
+        {
+            self.remove_mapping();
         }
     }
 
@@ -595,12 +597,12 @@ impl DoviRpu {
     }
 
     pub fn remove_cmv40_extension_metadata(&mut self) -> Result<()> {
-        if let Some(vdr_dm_data) = self.vdr_dm_data.as_mut() {
-            if vdr_dm_data.cmv40_metadata.is_some() {
-                self.modified = true;
+        if let Some(vdr_dm_data) = self.vdr_dm_data.as_mut()
+            && vdr_dm_data.cmv40_metadata.is_some()
+        {
+            self.modified = true;
 
-                vdr_dm_data.cmv40_metadata = None;
-            }
+            vdr_dm_data.cmv40_metadata = None;
         }
 
         Ok(())
@@ -639,12 +641,11 @@ impl DoviRpu {
 
         let dm_data = self.vdr_dm_data.as_mut().zip(src_rpu.vdr_dm_data.as_ref());
 
-        if let Some((dst_vdr_dm_data, src_vdr_dm_data)) = dm_data {
-            if src_vdr_dm_data.cmv40_metadata.is_some() && dst_vdr_dm_data.cmv40_metadata.is_none()
-            {
-                dst_vdr_dm_data.cmv40_metadata =
-                    Some(DmData::V40(CmV40DmData::new_with_l254_402()));
-            }
+        if let Some((dst_vdr_dm_data, src_vdr_dm_data)) = dm_data
+            && src_vdr_dm_data.cmv40_metadata.is_some()
+            && dst_vdr_dm_data.cmv40_metadata.is_none()
+        {
+            dst_vdr_dm_data.cmv40_metadata = Some(DmData::V40(CmV40DmData::new_with_l254_402()));
         }
 
         self.replace_levels_from_rpu(src_rpu, levels)
