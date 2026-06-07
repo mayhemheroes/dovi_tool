@@ -479,6 +479,35 @@ pub unsafe extern "C" fn dovi_rpu_add_cmv40_safe_default_metadata(ptr: *mut RpuO
 /// # Safety
 /// The struct pointer must be valid.
 ///
+/// Removes the CMv4.0 extension metadata from the RPU, leaving a CMv2.9-only RPU.
+/// Does nothing if CMv4.0 metadata is not present.
+///
+/// Returns 0 on success, -1 on error.
+/// If an error occurs, it is logged to RpuOpaque.error.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dovi_rpu_remove_cmv40_metadata(ptr: *mut RpuOpaque) -> i32 {
+    if ptr.is_null() {
+        return -1;
+    }
+
+    let opaque = unsafe { &mut *ptr };
+
+    if let Some(rpu) = &mut opaque.rpu {
+        match rpu.remove_cmv40_extension_metadata() {
+            Ok(_) => 0,
+            Err(e) => {
+                opaque.error = CString::new(format!("Failed removing CMv4.0 metadata: {e}")).ok();
+                -1
+            }
+        }
+    } else {
+        -1
+    }
+}
+
+/// # Safety
+/// The struct pointer must be valid.
+///
 /// Writes the encoded RPU as `itu_t_t35_payload_bytes` for AV1 ITU-T T.35 metadata OBU
 /// If an error occurs in the writing, it is logged to RpuOpaque.error
 #[unsafe(no_mangle)]
