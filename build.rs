@@ -13,7 +13,7 @@ fn main() -> Result<()> {
         .and_then(|emitter| emitter.emit());
 
     if let Err(e) = gitcl_res {
-        eprintln!("error occured while generating instructions: {e:?}");
+        eprintln!("error occurred while generating instructions: {e:?}");
         Emitter::default().idempotent().fail_on_error().emit()?;
     }
 
