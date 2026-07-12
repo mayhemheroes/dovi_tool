@@ -13,6 +13,16 @@ use processor::{HevcProcessor, HevcProcessorOpts};
 use super::hdr10plus_utils::prefix_sei_removed_hdr10plus_nalu;
 use super::{CliOptions, convert_encoded_from_opts};
 
+#[derive(thiserror::Error, Debug)]
+pub enum DoviProcessorError {
+    #[error("No RPU was found in input file")]
+    NoRpuFound,
+    #[error("No enhancement layer was found in input file")]
+    NoElFound,
+    #[error("Missing frame/slices for metadata! Decoded index {0}")]
+    MissingFrame(usize),
+}
+
 pub struct DoviProcessor {
     input: PathBuf,
     options: CliOptions,
@@ -26,6 +36,7 @@ pub struct DoviProcessor {
     dovi_writer: DoviWriter,
 
     processor_opts: DoviProcessorOptions,
+    state: DoviProcessorState,
 }
 
 pub struct DoviWriter {
@@ -45,6 +56,12 @@ pub struct RpuNal {
 #[derive(Default)]
 pub struct DoviProcessorOptions {
     pub limit: Option<u64>,
+}
+
+#[derive(Default)]
+struct DoviProcessorState {
+    found_rpu: bool,
+    found_el: bool,
 }
 
 impl DoviWriter {
@@ -110,6 +127,7 @@ impl DoviProcessor {
             progress_bar,
             dovi_writer,
             processor_opts,
+            state: Default::default(),
         }
     }
 
@@ -212,6 +230,8 @@ impl DoviProcessor {
 
             match nal.nal_type {
                 NAL_UNSPEC63 => {
+                    self.state.found_el = true;
+
                     if let Some(el_writer) = self.dovi_writer.el_writer.as_mut() {
                         // Can't know for EL, always size 4
                         NALUnit::write_with_preset(
@@ -224,6 +244,8 @@ impl DoviProcessor {
                     }
                 }
                 NAL_UNSPEC62 => {
+                    self.state.found_rpu = true;
+
                     self.previous_rpu_index = nal.decoded_frame_index;
                     let rpu_data = &chunk[nal.start..nal.end];
 
@@ -313,10 +335,7 @@ impl DoviProcessor {
                 if let Some(i) = matching_index {
                     frames[i].presentation_number
                 } else {
-                    panic!(
-                        "Missing frame/slices for metadata! Decoded index {}",
-                        rpu.decoded_index
-                    );
+                    panic!("{}", DoviProcessorError::MissingFrame(rpu.decoded_index));
                 }
             });
 
@@ -345,6 +364,20 @@ impl DoviProcessor {
 
         Ok(())
     }
+
+    fn verify_process_state(&self, parser: &HevcParser) -> Result<()> {
+        // first frame fully parsed
+        if !parser.ordered_frames().is_empty() {
+            if !self.state.found_rpu && self.dovi_writer.rpu_writer.is_some() {
+                bail!(DoviProcessorError::NoRpuFound);
+            }
+            if !self.state.found_el && self.dovi_writer.el_writer.is_some() {
+                bail!(DoviProcessorError::NoElFound);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl IoProcessor for DoviProcessor {
@@ -356,15 +389,19 @@ impl IoProcessor for DoviProcessor {
         self.progress_bar.inc(delta);
     }
 
-    fn process_nals(&mut self, _parser: &HevcParser, nals: &[NALUnit], chunk: &[u8]) -> Result<()> {
+    fn process_nals(&mut self, parser: &HevcParser, nals: &[NALUnit], chunk: &[u8]) -> Result<()> {
         self.write_nals(chunk, nals)?;
         self.payload_count += 1;
+
+        self.verify_process_state(parser)?;
 
         Ok(())
     }
 
     fn finalize(&mut self, parser: &HevcParser) -> Result<()> {
         self.progress_bar.finish_and_clear();
+        self.verify_process_state(parser)?;
+
         self.flush_writer(parser)
     }
 }

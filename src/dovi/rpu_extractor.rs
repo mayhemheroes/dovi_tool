@@ -2,7 +2,7 @@ use anyhow::Result;
 use indicatif::ProgressBar;
 use std::path::PathBuf;
 
-use crate::commands::ExtractRpuArgs;
+use crate::{commands::ExtractRpuArgs, dovi::general_read_write::DoviProcessorError};
 
 use super::{
     CliOptions, IoFormat,
@@ -54,7 +54,9 @@ impl RpuExtractor {
     }
 
     fn extract_rpu_from_el(&self, pb: ProgressBar, options: CliOptions) -> Result<()> {
-        let dovi_writer = DoviWriter::new(None, None, Some(&self.rpu_out), None);
+        let rpu_out = self.rpu_out.as_path();
+
+        let dovi_writer = DoviWriter::new(None, None, Some(rpu_out), None);
         let mut dovi_processor = DoviProcessor::new(
             options,
             self.input.clone(),
@@ -63,6 +65,15 @@ impl RpuExtractor {
             DoviProcessorOptions { limit: self.limit },
         );
 
-        dovi_processor.read_write_from_io(&self.format)
+        let res = dovi_processor.read_write_from_io(&self.format);
+
+        if res.as_ref().is_err_and(|err| {
+            err.downcast_ref::<DoviProcessorError>()
+                .is_some_and(|e| matches!(e, DoviProcessorError::NoRpuFound))
+        }) {
+            std::fs::remove_file(rpu_out)?;
+        }
+
+        res
     }
 }

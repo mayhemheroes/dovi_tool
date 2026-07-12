@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 use indicatif::ProgressBar;
 use std::path::PathBuf;
 
-use crate::commands::DemuxArgs;
+use crate::{commands::DemuxArgs, dovi::general_read_write::DoviProcessorError};
 
 use super::{CliOptions, IoFormat, general_read_write, input_from_either};
 
@@ -68,8 +68,9 @@ impl Demuxer {
         } else {
             Some(self.bl_out.as_path())
         };
+        let el_out = self.el_out.as_path();
 
-        let dovi_writer = DoviWriter::new(bl_out, Some(self.el_out.as_path()), None, None);
+        let dovi_writer = DoviWriter::new(bl_out, Some(el_out), None, None);
         let mut dovi_processor = DoviProcessor::new(
             options,
             self.input.clone(),
@@ -78,6 +79,18 @@ impl Demuxer {
             Default::default(),
         );
 
-        dovi_processor.read_write_from_io(&self.format)
+        let res = dovi_processor.read_write_from_io(&self.format);
+
+        if res.as_ref().is_err_and(|err| {
+            err.downcast_ref::<DoviProcessorError>()
+                .is_some_and(|e| matches!(e, DoviProcessorError::NoElFound))
+        }) {
+            if let Some(bl_out) = bl_out {
+                std::fs::remove_file(bl_out)?;
+            }
+            std::fs::remove_file(el_out)?;
+        }
+
+        res
     }
 }
