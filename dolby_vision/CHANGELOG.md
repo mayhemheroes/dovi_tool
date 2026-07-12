@@ -1,4 +1,4 @@
-## Unreleased
+## 3.4.0
 
 - `ReservedExtMetadataBlock.data` was replaced by a regular `Vec`.
 - Improved DM data error contexts to include the CM version and block levels.
@@ -12,6 +12,8 @@
 C-API:
 - Added `dovi_rpu_add_cmv40_safe_default_metadata` function.
 - Added `dovi_generate_from_json` function.
+  - `serde` feature is now enabled by default when building the C API.
+- Added `dovi_rpu_remove_cmv40_metadata` function.
 
 ## 3.3.2
 - `rpu`: fix `write_rpu_data` allocated capacity. Now static and 512 bytes.
