@@ -79,16 +79,16 @@ pub struct EditConfig {
 #[serde(deny_unknown_fields)]
 pub struct ActiveArea {
     #[serde(default)]
-    crop: bool,
+    pub crop: bool,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    drop_l5: Option<String>,
+    pub drop_l5: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    presets: Option<Vec<ActiveAreaOffsets>>,
+    pub presets: Option<Vec<ActiveAreaOffsets>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    edits: Option<HashMap<String, u16>>,
+    pub edits: Option<HashMap<String, u16>>,
 }
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
@@ -190,6 +190,13 @@ impl EditConfig {
         let config: EditConfig = serde_json::from_reader(&json_file)?;
 
         Ok(config)
+    }
+
+    pub fn from_active_area(active_area: ActiveArea) -> Self {
+        Self {
+            active_area: Some(active_area),
+            ..Default::default()
+        }
     }
 
     fn execute(&self, rpus: &mut [Option<DoviRpu>]) -> Result<()> {
@@ -518,6 +525,18 @@ impl EditConfig {
         rpu.add_cmv40_safe_default_metadata()?;
 
         Ok(())
+    }
+}
+
+impl ActiveAreaOffsets {
+    pub fn new(id: u16, meta: &ExtMetadataBlockLevel5) -> Self {
+        Self {
+            id,
+            left: meta.active_area_left_offset,
+            right: meta.active_area_right_offset,
+            top: meta.active_area_top_offset,
+            bottom: meta.active_area_bottom_offset,
+        }
     }
 }
 

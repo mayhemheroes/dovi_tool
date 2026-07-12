@@ -15,7 +15,10 @@ use serde_json::json;
 use dolby_vision::rpu::utils::parse_rpu_file;
 
 use crate::commands::{ExportArgs, ExportData, ExportLevel, LevelsOutputFormat};
-use crate::dovi::input_from_either;
+use crate::dovi::{
+    editor::{ActiveArea, ActiveAreaOffsets, EditConfig},
+    input_from_either,
+};
 
 use super::DoviRpu;
 
@@ -190,28 +193,23 @@ impl Exporter {
         let l5_presets = l5_presets
             .iter()
             .enumerate()
-            .map(|(id, l5)| {
-                json!({
-                    "id": id,
-                    "left": l5.active_area_left_offset,
-                    "right": l5.active_area_right_offset,
-                    "top": l5.active_area_top_offset,
-                    "bottom": l5.active_area_bottom_offset
-                })
-            })
+            .map(|(id, l5)| ActiveAreaOffsets::new(id as u16, l5))
             .collect::<Vec<_>>();
-        let l5_edits = l5_edits.iter().map(|(edit_range, id)| {
-            (
-                format!("{}-{}", edit_range.start, edit_range.end),
-                json!(id),
-            )
-        });
-        let l5_edits = serde_json::Value::Object(l5_edits.collect());
+        let l5_edits = l5_edits
+            .into_iter()
+            .map(|(edit_range, id)| {
+                (
+                    format!("{}-{}", edit_range.start, edit_range.end),
+                    id as u16,
+                )
+            })
+            .collect();
 
-        let edit_config = json!({
-            "crop": true,
-            "presets": l5_presets,
-            "edits": l5_edits,
+        let edit_config = EditConfig::from_active_area(ActiveArea {
+            crop: true,
+            presets: Some(l5_presets),
+            edits: Some(l5_edits),
+            ..Default::default()
         });
         serde_json::to_writer_pretty(writer, &edit_config)?;
 

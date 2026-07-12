@@ -186,7 +186,7 @@ impl ExtMetadataBlock {
         ensure!(
             T::ALLOWED_BLOCK_LEVELS.contains(&level),
             "Metadata block level {} is not allowed",
-            &level
+            level
         );
 
         Ok(())

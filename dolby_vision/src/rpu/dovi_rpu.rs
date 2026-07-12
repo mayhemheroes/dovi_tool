@@ -69,7 +69,7 @@ pub struct DoviRpu {
 impl DoviRpu {
     pub fn validated_trimmed_data(data: &[u8]) -> Result<&[u8]> {
         if data.len() < 25 {
-            bail!("Invalid RPU length: {}", &data.len());
+            bail!("Invalid RPU length: {}", data.len());
         }
 
         // Including 0x7C01 prepended
