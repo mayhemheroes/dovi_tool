@@ -1,0 +1,12 @@
+project: dovi-tool
+target: parse-itu-t35-dashif
+
+cmds:
+  - cmd: /mayhem/parse_itu_t35_dashif
+    libfuzzer: true
+
+# No testsuite: directive — the old fork shipped no seeds, and the canonical two-entry seed form
+# (server tar via $MAYHEM_PROJECT) is broken for underscore repo names (Mayhem normalizes the
+# project slug dovi_tool -> dovi-tool but expands the literal name in the URL -> run fails to
+# start with 'do not have access to use a test suite'; same fleet issue as hdr10plus_tool,
+# DECISION 2026-07-11). A directive-less libFuzzer target uses the server defaults and fuzzes fine.
