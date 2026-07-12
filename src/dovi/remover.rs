@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::Result;
 use indicatif::ProgressBar;
 use std::path::PathBuf;
 
@@ -42,13 +42,14 @@ impl Remover {
     fn process_input(&self, options: CliOptions) -> Result<()> {
         let pb = super::initialize_progress_bar(&self.format, &self.input)?;
 
-        match self.format {
-            IoFormat::Matroska => bail!("Remover: Matroska input is unsupported"),
-            _ => self.remove_from_raw_hevc(pb, options),
+        if self.format == IoFormat::Matroska {
+            println!("Remover: Matroska input is experimental!");
         }
+
+        self.remove_from_hevc(pb, options)
     }
 
-    fn remove_from_raw_hevc(&self, pb: ProgressBar, options: CliOptions) -> Result<()> {
+    fn remove_from_hevc(&self, pb: ProgressBar, options: CliOptions) -> Result<()> {
         let bl_out = Some(self.output.as_path());
 
         let dovi_writer = DoviWriter::new(bl_out, None, None, None);

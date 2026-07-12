@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::Result;
 use indicatif::ProgressBar;
 use std::path::PathBuf;
 
@@ -51,13 +51,14 @@ impl Converter {
     fn process_input(&self, options: CliOptions) -> Result<()> {
         let pb = super::initialize_progress_bar(&self.format, &self.input)?;
 
-        match self.format {
-            IoFormat::Matroska => bail!("Converter: Matroska input is unsupported"),
-            _ => self.convert_raw_hevc(pb, options),
+        if self.format == IoFormat::Matroska {
+            println!("Converter: Matroska input is experimental!");
         }
+
+        self.convert_hevc(pb, options)
     }
 
-    fn convert_raw_hevc(&self, pb: ProgressBar, options: CliOptions) -> Result<()> {
+    fn convert_hevc(&self, pb: ProgressBar, options: CliOptions) -> Result<()> {
         let dovi_writer = DoviWriter::new(None, None, None, Some(&self.output));
         let mut dovi_processor = DoviProcessor::new(
             options,

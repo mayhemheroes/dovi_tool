@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::Result;
 use indicatif::ProgressBar;
 use std::path::PathBuf;
 
@@ -56,13 +56,14 @@ impl Demuxer {
     fn process_input(&self, options: CliOptions) -> Result<()> {
         let pb = super::initialize_progress_bar(&self.format, &self.input)?;
 
-        match self.format {
-            IoFormat::Matroska => bail!("Demuxer: Matroska input is unsupported"),
-            _ => self.demux_raw_hevc(pb, options),
+        if self.format == IoFormat::Matroska {
+            println!("Demuxer: Matroska input is experimental!");
         }
+
+        self.demux_hevc(pb, options)
     }
 
-    fn demux_raw_hevc(&self, pb: ProgressBar, options: CliOptions) -> Result<()> {
+    fn demux_hevc(&self, pb: ProgressBar, options: CliOptions) -> Result<()> {
         let bl_out = if self.el_only {
             None
         } else {
