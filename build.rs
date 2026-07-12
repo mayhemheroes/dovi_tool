@@ -1,10 +1,10 @@
 use anyhow::Result;
-use vergen_gitcl::{Emitter, GitclBuilder};
+use vergen_gitcl::{Emitter, Gitcl};
 
 fn main() -> Result<()> {
-    let gitcl = GitclBuilder::default()
+    let gitcl = Gitcl::builder()
         .describe(true, true, Some("[0-9]*"))
-        .build()?;
+        .build();
 
     let gitcl_res = Emitter::default()
         .idempotent()
